@@ -1,5 +1,5 @@
 
-fetch('https://raw.githubusercontent.com/OzGhost/monkey-script/master/di.js')
+fetch('https://github.com/OzGhost/monkey-script/blob/master/di.js')
 .then(function(rs){
   console.log("cout << got rs: ", rs, arguments)
 }, function(err){
