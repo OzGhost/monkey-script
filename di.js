@@ -1,3 +1,4 @@
+window.alert('cout << noop!')
 fetch('https://raw.githubusercontent.com/OzGhost/monkey-script/master/di.js')
 .then(function(rs){
   console.log("cout << got rs: ", rs, arguments)
@@ -5,7 +6,7 @@ fetch('https://raw.githubusercontent.com/OzGhost/monkey-script/master/di.js')
   console.log("cout << got err: ", err, arguments)
 })
 
-window.DI = function(){
+window.DI = (function(){
   var _this = this
 
   this.dsa = []
@@ -46,4 +47,4 @@ window.DI = function(){
   return {
     load
   }
-}
+})()
