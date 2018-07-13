@@ -1,11 +1,3 @@
-window.alert('cout << noop!')
-fetch('https://raw.githubusercontent.com/OzGhost/monkey-script/master/di.js')
-.then(function(rs){
-  console.log("cout << got rs: ", rs, arguments)
-}, function(err){
-  console.log("cout << got err: ", err, arguments)
-})
-
 window.DI = (function(){
   var _this = this
 
@@ -34,8 +26,10 @@ window.DI = (function(){
   }
 
   this.loadSingleDependency = function(dependency, callback) {
-    fetch(_this.buildDependencyUrl(dependency))
-      .then()
+    var tag = document.createElement('SCRIPT')
+    tag.type = 'text/javascript'
+    tag.src = _this.buildDependencyUrl(dependency)
+    document.body.appendChild()
   }
 
   this.buildDependencyUrl = function(dependency) {
