@@ -1,10 +1,25 @@
 
-fetch('https://github.com/OzGhost/monkey-script/blob/master/di.js')
-.then(function(rs){
-  console.log("cout << got rs: ", rs, arguments)
-}, function(err){
-  console.log("cout << got err: ", err, arguments)
-})
+window.util = (function(){
+  var _this = this
+
+  this.get = function(url, resolve, reject) {
+    var xhr = new XMLHttpRequest()
+    xhr.onreadystatechange = function() {
+      if (this.readyState == 4) {
+        if (this.status == 200)
+          resolve(xhr.responseText)
+        else
+          reject && reject()
+      }
+    }
+    xhr.open('GET', url, true)
+    xhr.send()
+  }
+
+  return {
+    get: _this.get
+  }
+})()
 
 window.DI = (function(){
   var _this = this
@@ -16,8 +31,9 @@ window.DI = (function(){
 
     var len = _this.dsa.length
     for (var i = 0; i < len; i += 2) {
-      _this.loadSingleDependency(_this.dsa[i], function() {
-        _this.dsa[i+1] = 1
+      _this.loadSingleDependency(_this.dsa[i], function(rs) {
+        _this.dsa[i+1] = rs
+        _this.tryToInjectDependencies()
       })
     }
   }
@@ -34,8 +50,11 @@ window.DI = (function(){
   }
 
   this.loadSingleDependency = function(dependency, callback) {
-    fetch(_this.buildDependencyUrl(dependency))
-      .then()
+    window.util.get(_this.buildDependencyUrl(dependency), function(rs){
+      callback(rs)
+    }, function(){
+      console.log('cout << ERROR << cannot load dependency: ', dependency)
+    })
   }
 
   this.buildDependencyUrl = function(dependency) {
@@ -44,7 +63,30 @@ window.DI = (function(){
           + '.js'
   }
 
+  this.tryToInjectDependencies =  function() {
+    var len = _this.dsa.length
+    for (var i = 1; i < len; i += 2) {
+      if (typeof(_this.dsa[i]) !== 'string') {
+        console.log(
+          'cout << INFO << incomplete at: ', i-1, '; ',
+          'name: ', _this.dsa[i-1]
+        )
+        return
+      }
+    }
+    for (var i = 1; i < len; i += 2) {
+      _this.injectScript(_this.dsa[i])
+    }
+  }
+
+  this.injectScript = function(content) {
+    var tag = document.createElement('SCRIPT')
+    tag.type = 'text/javascript'
+    tag.text = content
+    document.body.appendChild(tag)
+  }
+
   return {
-    load
+    load: _this.load
   }
 })()
