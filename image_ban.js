@@ -1,5 +1,8 @@
 var imageBan = function() {
-  var targetArea = document.getElementsByClassName("client_main_container")[0];
+  var target= document.getElementsByClassName("client_main_container");
+  if (!target || target.length <= 0)
+    return;
+  var targetArea = target[0];
 
   targetArea.addEventListener("DOMSubtreeModified", function(e) {
     var senderTitle = targetArea.querySelector("#im_title")
