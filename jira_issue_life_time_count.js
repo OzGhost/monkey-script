@@ -1,3 +1,4 @@
+'use strict';
 (function(){
   window.kit = window.kit || {}
   window.kit.workingDayCount = function(){
@@ -151,11 +152,10 @@
       count: _this.count
     }
   }
-})()
+})();
 
 (function(){
-  console.warn('cout << starting the script')
-  var _this = this
+  var _this = {}
 
   _this.subtaskURI = 'https://jira.axonivy.com/jira/rest/api/2/issue/{x}/subtask'
   _this.issueBrowseURL = 'https://jira.axonivy.com/jira/browse/'
@@ -168,20 +168,15 @@
   _this.subs = []
 
   _this.visit = function() {
-    if (_this.testing) {
-      _this.subs[0] = []
-      _this.visitIssue('AF-21465', 0)
-      return
-    }
     _this.nodes = document.getElementsByClassName('js-key-link')
-    if (nodes.length === 0) {
+    if (_this.nodes.length === 0) {
       console.log('cout << no thing to show here!')
       return
     }
 
-    for (var i = 0; i < nodes.length; i++) {
+    for (var i = 0; i < _this.nodes.length; i++) {
       _this.subs[i] = []
-      _this.visitIssue(nodes[i].title, i)
+      _this.visitIssue(_this.nodes[i].title, i)
     }
   }
 
@@ -218,6 +213,7 @@
             at: matches[1],
             kind: type
           })
+          console.warn('hit matching')
           matches = _this.actionKickOffPattern.exec(d)
         }
         _this.subs[issueIndex][subIndex] = _this.calculateSpendedTime(startTimes)
@@ -294,4 +290,4 @@
   b.addEventListener('click', _this.visit)
   _this.pin(b, 0)
 
-})()
+})();
