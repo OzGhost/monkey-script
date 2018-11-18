@@ -4,13 +4,11 @@ window.onload = function() {
 
   function testRun(start, end, expect) {
     total++
-    var out = window.kit.workingDayCount()
-                      .count(new Date(start), new Date(end)).format()
-    console.log('input: from ' + start + ' to ' + end)
+    var out = window.kit.wdc().count(new Date(start), new Date(end)).format()
     if (expect === out) {
-      console.warn('PASS')
       pass++
     } else {
+      console.warn('input:    |    ' + start + '    -=>    ' + end)
       console.error('expected: [' + expect + '] but was: [' + out + ']')
     }
   }
@@ -71,7 +69,7 @@ window.onload = function() {
   testRun('2018-10-01T14:00:00', '2018-10-22T09:42:00', '14d7h42m')
 
 
-  console.error(' >> ' + pass + ' / ' + total + ' <<')
+  console.log(' >> ' + pass + ' / ' + total + ' <<')
 
   /**
 
