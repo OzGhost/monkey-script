@@ -4,11 +4,11 @@ window.onload = function() {
 
   function testRun(start, end, expect) {
     total++
-    var out = window.kit.wdc().count(new Date(start), new Date(end)).format()
+    var out = window.kit.wdc.count(new Date(start), new Date(end)).format()
     if (expect === out) {
       pass++
     } else {
-      console.warn('input:    |    ' + start + '    -=>    ' + end)
+      console.warn('['+total+'] input:    |    ' + start + '    -=>    ' + end)
       console.error('expected: [' + expect + '] but was: [' + out + ']')
     }
   }
@@ -68,6 +68,30 @@ window.onload = function() {
   testRun('2018-10-01T00:00:00', '2018-10-02T19:20:00', '2d0h0m')
   testRun('2018-10-01T14:00:00', '2018-10-22T09:42:00', '14d7h42m')
 
+  window.kit.cfg.set("wdc", {
+    lowerBound: new Date("2018-05-22").getTime() / 60000,
+    upperBound: (new Date("2018-05-23").getTime() + 86400000) / 60000
+  });
+
+  // out range config test
+  testRun('2018-05-01T00:00:00', '2018-05-09T00:00:00', '0d0h0m');
+  testRun('2018-05-25T00:00:00', '2018-05-30T00:00:00', '0d0h0m');
+  testRun('2018-05-21T00:00:00', '2018-05-22T00:00:00', '0d0h0m');
+  testRun('2018-05-24T00:00:00', '2018-05-25T00:00:00', '0d0h0m');
+  testRun('2018-05-23T00:00:00', '2018-05-24T00:00:00', '1d0h0m');
+  testRun('2018-05-22T00:00:00', '2018-05-22T13:00:00', '0d3h0m');
+  testRun('2018-05-20T00:00:00', '2018-05-22T13:00:00', '0d3h0m');
+  testRun('2018-05-23T15:00:00', '2018-05-24T00:00:00', '0d4h30m');
+  testRun('2018-05-23T15:00:00', '2018-05-29T00:00:00', '0d4h30m');
+  testRun('2018-05-22T00:00:00', '2018-05-23T00:00:00', '1d0h0m');
+  testRun('2018-05-22T13:00:00', '2018-05-23T09:00:00', '0d6h30m');
+
+  // weekend test
+  testRun('2018-03-03T14:00:00', '2018-03-04T09:42:00', '0d0h0m');
+  testRun('2018-03-03T10:00:00', '2018-03-03T19:42:00', '0d0h0m');
+  testRun('2018-03-04T10:00:00', '2018-03-04T11:42:00', '0d0h0m');
+  testRun('2018-03-02T17:00:00', '2018-03-04T11:42:00', '0d2h30m');
+  testRun('2018-03-01T17:00:00', '2018-03-04T11:42:00', '1d2h30m');
 
   console.log(' >> ' + pass + ' / ' + total + ' <<')
 

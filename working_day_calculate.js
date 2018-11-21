@@ -1,38 +1,28 @@
 (function(){
-  window.kit = window.kit || {};
-  /**
-   * working day counter
-   */
-  window.kit.wdc = function(){
+  function WorkingDateCounter () {
     var _this = this;
 
-    _this.reset = function() {
-      _this.start = 0;
-      _this.end = 0;
-      _this.day = 0;
-      _this.hour = 0;
-      _this.minute = 0;
-      _this.dayOfTheWeek = -1;
-      _this.remainingTime = -1;
-    };
-
     _this.count = function(start, end) {
-      _this.reset()
-      _this.start = start;
-      _this.end = end;
-      _this.dayOfTheWeek = start.getDay();
-      _this.remainingTime = Math.floor((end.getTime() - start.getTime()) / 60000);
+      _this.minutes = 0;
+      _this.start = Math.floor(start.getTime() / 60000);
+      _this.end = Math.floor(end.getTime() / 60000);
+      _this.startMID = _this.minuteInDay(start);
+      _this.endMID = _this.minuteInDay(end);
+      _this.beginningDay = start.getDay();
+      _this.endingDay = end.getDay();
+      _this.remainingMinutes = _this.end - _this.start;
 
-      if (_this.remainingTime > 0) {
-        if (_this.withinADay()) {
-          _this.minute += _this.inDayCount(
-            _this.minuteInDay(start),
-            _this.minuteInDay(end)
-          );
+      if (_this.remainingMinutes > 0) {
+        if (_this.withinSingleDay()) {
+          _this.minutes += _this.inDayCount(
+                                            _this.startMID,
+                                            _this.endMID,
+                                            _this.beginningDay
+                            );
         } else {
-          _this.countOddPrefixTime();
-          _this.countOddSuffixTime();
-          _this.countCompleteDayExcludeWeekend();
+          _this.minutes += _this.inDayCount(_this.startMID, 1440, _this.beginningDay)
+          _this.minutes += _this.inDayCount(0, _this.endMID, _this.endingDay)
+          _this.countTheRemainingDays();
         }
       }
 
@@ -42,22 +32,22 @@
       };
     }
 
-    _this.withinADay = function() {
-      var result = _this.start.getFullYear() == _this.end.getFullYear();
-      result = result && _this.start.getMonth() === _this.end.getMonth();
-      result = result && _this.start.getDate() === _this.end.getDate();
-      return result;
+    _this.withinSingleDay = function() {
+      return _this.end - _this.start <= 1440
+          && _this.startMID <= _this.endMID;
     };
 
-    _this.inDayCount = function(startInMinute, endInMinute) {
-      var startPhase = _this.phaseOfDay(startInMinute);
-      var endPhase = _this.phaseOfDay(endInMinute);
+    // here you go
+    _this.inDayCount = function(startMID, endMID) {
+      var startPhase = _this.phaseOfDay(startMID);
+      var endPhase = _this.phaseOfDay(endMID);
 
       if (startPhase === endPhase && (
             startPhase === 1
         ||  startPhase === 3
         ||  startPhase === 5
       )) {
+        // out of working hours
         return 0;
       }
 
@@ -152,12 +142,15 @@
     };
 
     _this.getMinutes = function() {
-      return _this.minute + (60*_this.hour) + (1440*_this.day);
+      return _this.minute;
     };
 
     return {
       count: _this.count
     };
   };
+
+  window.kit = window.kit || {};
+  window.kit.wdc = new WorkingDateCounter();
 })();
 
