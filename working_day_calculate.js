@@ -2,26 +2,45 @@
   function WorkingDateCounter () {
     var _this = this;
 
-    _this.count = function(start, end) {
-      _this.minutes = 0;
-      _this.start = Math.floor(start.getTime() / 60000);
-      _this.end = Math.floor(end.getTime() / 60000);
-      _this.startMID = _this.minuteInDay(start);
-      _this.endMID = _this.minuteInDay(end);
-      _this.beginningDay = start.getDay();
-      _this.endingDay = end.getDay();
-      _this.remainingMinutes = _this.end - _this.start;
+    var ONE_DATE_MINUTES = 480;
+    var MORNING_MINUTES = 180;
+    var SEVEN_THIRTY = 450;
+    var TWELVE = 720;
+    var AFTERNOON_MINUTES = 300;
+    var THIRTEEN_THIRTY = 810;
+    var NINETEEN_THIRTY = 1170;
+    var WHOLE_DAY = 1440;
 
-      if (_this.remainingMinutes > 0) {
+    _this.count = function(start, end) {
+      console.log("==============================", start, end);
+      _this.minutes = 0;
+
+      var adjustedStart = _this.getInRangeStart(start);
+      var adjustedEnd = _this.getInRangeEnd(end);
+
+      console.log(adjustedStart, adjustedEnd);
+      
+      _this.start = Math.floor(adjustedStart.getTime() / 60000);
+      _this.end = Math.floor(adjustedEnd.getTime() / 60000);
+      _this.startMID = _this.minuteInDay(adjustedStart);
+      _this.endMID = _this.minuteInDay(adjustedEnd);
+      _this.beginningDay = adjustedStart.getDay();
+      _this.endingDay = adjustedEnd.getDay();
+
+      if (_this.end - _this.start > 0) {
         if (_this.withinSingleDay()) {
+          //console.log("with in single day");
           _this.minutes += _this.inDayCount(
                                             _this.startMID,
                                             _this.endMID,
                                             _this.beginningDay
                             );
         } else {
-          _this.minutes += _this.inDayCount(_this.startMID, 1440, _this.beginningDay)
-          _this.minutes += _this.inDayCount(0, _this.endMID, _this.endingDay)
+          //console.log("more than a day");
+          _this.minutes += _this.inDayCount(
+                                  _this.startMID, WHOLE_DAY, _this.beginningDay)
+          _this.minutes += _this.inDayCount(
+                                  0, _this.endMID, _this.endingDay)
           _this.countTheRemainingDays();
         }
       }
@@ -32,8 +51,26 @@
       };
     }
 
+    _this.getInRangeStart = function(baseStart) {
+      console.log("cout << got ", baseStart);
+      var cfg = window.kit.cfg.get("wdc");
+      var lowerBound = cfg ? (cfg.lowerBound || baseStart) : baseStart;
+      console.log("lb: ", lowerBound);
+      return (baseStart.getTime() < lowerBound.getTime())
+              ? lowerBound
+              : baseStart;
+    }
+
+    _this.getInRangeEnd = function(baseEnd) {
+      var cfg = window.kit.cfg.get("wdc");
+      var upperBound = cfg ? (cfg.upperBound || baseEnd) : baseEnd;
+      if (baseEnd.getTime() > upperBound.getTime())
+        return upperBound;
+      return baseEnd;
+    }
+
     _this.withinSingleDay = function() {
-      return _this.end - _this.start <= 1440
+      return _this.end - _this.start < WHOLE_DAY
           && _this.startMID <= _this.endMID;
     };
 
@@ -52,20 +89,16 @@
       }
 
       if (startPhase === 1 && endPhase === 5) {
-        return 480;
+        return ONE_DATE_MINUTES;
       }
-
       var countedMinute = 0;
-
       if (startPhase < 3)
-        countedMinute += _this.morningTwoFactorCount(
-          startInMinute, startPhase, endInMinute, endPhase);
-
+        countedMinute += _this.morningCount(
+                                startMID, startPhase, endMID, endPhase);
       if (endPhase > 3)
-        countedMinute += _this.afternoonTwoFactorCount(
-          startInMinute, startPhase, endInMinute, endPhase);
-
-      return Math.min(countedMinute, 480);
+        countedMinute += _this.afternoonCount(
+                                startMID, startPhase, endMID, endPhase);
+      return Math.min(countedMinute, ONE_DATE_MINUTES);
     };
 
     _this.minuteInDay = function(date) {
@@ -86,59 +119,50 @@
       return -1;
     };
 
-    _this.morningTwoFactorCount = function(x, xp, y, yp) {
+    _this.morningCount = function(x, xp, y, yp) {
       if (xp === 1 && yp > 2) {
-        return 180;
+        return MORNING_MINUTES;
       }
-      var lowerEdge = Math.max(x, 450);
-      var upperEdge = Math.min(y, 720);
-      return upperEdge - lowerEdge;
+      var lowerBound = Math.max(x, SEVEN_THIRTY);
+      var upperBound = Math.min(y, TWELVE);
+      return upperBound - lowerBound;
     };
 
-    _this.afternoonTwoFactorCount = function(x, xp, y, yp) {
+    _this.afternoonCount = function(x, xp, y, yp) {
       if (yp === 5 && xp < 4) {
-        return 300;
+        return AFTERNOON_MINUTES;
       }
-      var lowerEdge = Math.max(x, 810);
-      var upperEdge = Math.min(y, 1170);
-      return upperEdge - lowerEdge;
+      var lowerBound = Math.max(x, THIRTEEN_THIRTY);
+      var upperBound = Math.min(y, NINETEEN_THIRTY);
+      return upperBound - lowerBound;
     };
 
-    _this.countOddPrefixTime = function() {
-      var mid = _this.minuteInDay(_this.start);
-      _this.minute += _this.inDayCount(mid, 1200);
-      _this.remainingTime -= 1440 - mid;
-    };
-
-    _this.countOddSuffixTime = function() {
-      var mid = _this.minuteInDay(_this.end);
-      _this.minute += _this.inDayCount(0, mid);
-      _this.remainingTime -= mid;
-    };
-
-    _this.countCompleteDayExcludeWeekend = function() {
-      var dayOfTheWeek = _this.dayOfTheWeek;
-      var totalRemainDay = Math.floor(_this.remainingTime / 1440);
-      for (var i = 0; i < totalRemainDay; i++) {
-        dayOfTheWeek++;
-        if (dayOfTheWeek > 6)
-          dayOfTheWeek = 0;
-        if (dayOfTheWeek != 0 && dayOfTheWeek != 6)
-          _this.day++;
+    _this.countTheRemainingDays = function() {
+      var weekDayIndicate = _this.beginningDay;
+      var remainingMinutes = _this.end - _this.start;
+      remainingMinutes -= _this.endMID;
+      remainingMinutes -= WHOLE_DAY - _this.startMID;
+      var remainingDays = Math.floor(remainingMinutes / WHOLE_DAY);
+      for (var i = 0; i < remainingDays; i++) {
+        weekDayIndicate++;
+        if (weekDayIndicate > 6)
+          weekDayIndicate = 0;
+        if (weekDayIndicate != 0 && weekDayIndicate != 6) {
+          _this.minutes += ONE_DATE_MINUTES;
+        }
       }
     };
 
     _this.format = function() {
-      _this.reCorrect();
-      return _this.day + 'd' + _this.hour + 'h' + _this.minute + 'm';
-    };
-
-    _this.reCorrect = function() {
-      _this.hour = Math.floor(_this.minute / 60);
-      _this.minute -= _this.hour * 60;
-      var dayCount = Math.floor(_this.hour / 8);
-      _this.hour -= dayCount * 8;
-      _this.day += dayCount;
+      var days = Math.floor(_this.minutes / ONE_DATE_MINUTES);
+      //console.log("cout << days: ", days);
+      var hours = Math.floor(_this.minutes / 60);
+      //console.log("cout << hours: ", hours);
+      var minutes = _this.minutes - hours*60;
+      //console.log("cout << minutes: ", minutes);
+      hours -= days*8;
+      //console.log("cout << wdc::format : ", _this.minutes);
+      return days + 'd' + hours + 'h' + minutes + 'm';
     };
 
     _this.getMinutes = function() {
@@ -151,6 +175,6 @@
   };
 
   window.kit = window.kit || {};
-  window.kit.wdc = new WorkingDateCounter();
+  window.kit.wdc = window.kit.wdc || new WorkingDateCounter();
 })();
 

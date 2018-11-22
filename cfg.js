@@ -23,5 +23,6 @@
   }
 
   window.kit = window.kit || {};
-  window.kit.cfg = new Configuration();
+  window.kit.cfg = window.kit.cfg || new Configuration();
 })();
+
