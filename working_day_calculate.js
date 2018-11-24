@@ -12,31 +12,26 @@
     var WHOLE_DAY = 1440;
 
     _this.count = function(start, end) {
-      console.log("==============================", start, end);
       _this.minutes = 0;
 
       var adjustedStart = _this.getInRangeStart(start);
       var adjustedEnd = _this.getInRangeEnd(end);
 
-      console.log(adjustedStart, adjustedEnd);
-      
       _this.start = Math.floor(adjustedStart.getTime() / 60000);
       _this.end = Math.floor(adjustedEnd.getTime() / 60000);
       _this.startMID = _this.minuteInDay(adjustedStart);
       _this.endMID = _this.minuteInDay(adjustedEnd);
-      _this.beginningDay = adjustedStart.getDay();
-      _this.endingDay = adjustedEnd.getDay();
+      _this.beginningDay = adjustedStart.getUTCDay();
+      _this.endingDay = adjustedEnd.getUTCDay();
 
       if (_this.end - _this.start > 0) {
         if (_this.withinSingleDay()) {
-          //console.log("with in single day");
           _this.minutes += _this.inDayCount(
                                             _this.startMID,
                                             _this.endMID,
                                             _this.beginningDay
                             );
         } else {
-          //console.log("more than a day");
           _this.minutes += _this.inDayCount(
                                   _this.startMID, WHOLE_DAY, _this.beginningDay)
           _this.minutes += _this.inDayCount(
@@ -52,10 +47,8 @@
     }
 
     _this.getInRangeStart = function(baseStart) {
-      console.log("cout << got ", baseStart);
       var cfg = window.kit.cfg.get("wdc");
       var lowerBound = cfg ? (cfg.lowerBound || baseStart) : baseStart;
-      console.log("lb: ", lowerBound);
       return (baseStart.getTime() < lowerBound.getTime())
               ? lowerBound
               : baseStart;
@@ -74,8 +67,9 @@
           && _this.startMID <= _this.endMID;
     };
 
-    // here you go
-    _this.inDayCount = function(startMID, endMID) {
+    _this.inDayCount = function(startMID, endMID, dayOfWeek) {
+      if (dayOfWeek == 0 || dayOfWeek == 6)
+        return 0;
       var startPhase = _this.phaseOfDay(startMID);
       var endPhase = _this.phaseOfDay(endMID);
 
@@ -102,7 +96,12 @@
     };
 
     _this.minuteInDay = function(date) {
-      return date.getHours()*60 + date.getMinutes();
+      var minute = date.getHours()*60
+                    + date.getMinutes()
+                    + date.getTimezoneOffset();
+      if (minute < 0)
+        return WHOLE_DAY + minute;
+      return minute;
     };
 
     _this.phaseOfDay = function(minuteInDay) {
@@ -155,13 +154,9 @@
 
     _this.format = function() {
       var days = Math.floor(_this.minutes / ONE_DATE_MINUTES);
-      //console.log("cout << days: ", days);
       var hours = Math.floor(_this.minutes / 60);
-      //console.log("cout << hours: ", hours);
       var minutes = _this.minutes - hours*60;
-      //console.log("cout << minutes: ", minutes);
       hours -= days*8;
-      //console.log("cout << wdc::format : ", _this.minutes);
       return days + 'd' + hours + 'h' + minutes + 'm';
     };
 
