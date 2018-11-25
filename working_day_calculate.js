@@ -1,6 +1,7 @@
 (function(){
   function WorkingDateCounter () {
     var _this = this;
+    var test = false;
 
     var ONE_DATE_MINUTES = 480;
     var MORNING_MINUTES = 180;
@@ -17,12 +18,34 @@
       var adjustedStart = _this.getInRangeStart(start);
       var adjustedEnd = _this.getInRangeEnd(end);
 
-      _this.start = Math.floor(adjustedStart.getTime() / 60000);
-      _this.end = Math.floor(adjustedEnd.getTime() / 60000);
+      _this.start = Math.floor(_this.getLocaleTime(adjustedStart) / 60000);
+      _this.end = Math.floor(_this.getLocaleTime(adjustedEnd) / 60000);
       _this.startMID = _this.minuteInDay(adjustedStart);
       _this.endMID = _this.minuteInDay(adjustedEnd);
-      _this.beginningDay = adjustedStart.getUTCDay();
-      _this.endingDay = adjustedEnd.getUTCDay();
+      _this.beginningDay = adjustedStart.getDay();
+      _this.endingDay = adjustedEnd.getDay();
+      _this.excluded = _this.getExcludedRanges();
+
+      if (test)
+        console.log(
+          start,
+          start.toLocaleString(),
+          end,
+          end.toLocaleString()
+        );
+      if (test)
+        console.log(" adjusted: ",
+          adjustedStart,
+          _this.start,
+          adjustedStart.toLocaleString(),
+          adjustedEnd,
+          _this.end,
+          adjustedEnd.toLocaleString(),
+          _this.startMID,
+          _this.endMID,
+          _this.beginningDay,
+          _this.endingDay
+        );
 
       if (_this.end - _this.start > 0) {
         if (_this.withinSingleDay()) {
@@ -46,20 +69,32 @@
       };
     }
 
+    _this.getExcludedRanges = function() {
+      var exc = _this.getConfig("except", []);
+      console.log(exc);
+    }
+
+    _this.getConfig = function(key, fallback) {
+      var cfg = window.kit.cfg.get("wdc")
+      return cfg ? (cfg[key] || fallback) : fallback;
+    }
+
     _this.getInRangeStart = function(baseStart) {
-      var cfg = window.kit.cfg.get("wdc");
-      var lowerBound = cfg ? (cfg.lowerBound || baseStart) : baseStart;
-      return (baseStart.getTime() < lowerBound.getTime())
+      var lowerBound = _this.getConfig("lowerBound", baseStart);
+      return (_this.getLocaleTime(baseStart) < _this.getLocaleTime(lowerBound))
               ? lowerBound
               : baseStart;
     }
 
     _this.getInRangeEnd = function(baseEnd) {
-      var cfg = window.kit.cfg.get("wdc");
-      var upperBound = cfg ? (cfg.upperBound || baseEnd) : baseEnd;
-      if (baseEnd.getTime() > upperBound.getTime())
+      var upperBound = _this.getConfig("upperBound", baseEnd);
+      if (_this.getLocaleTime(baseEnd) > _this.getLocaleTime(upperBound))
         return upperBound;
       return baseEnd;
+    }
+
+    _this.getLocaleTime = function(input) {
+      return input.getTime() - input.getTimezoneOffset();
     }
 
     _this.withinSingleDay = function() {
@@ -97,8 +132,7 @@
 
     _this.minuteInDay = function(date) {
       var minute = date.getHours()*60
-                    + date.getMinutes()
-                    + date.getTimezoneOffset();
+                    + date.getMinutes();
       if (minute < 0)
         return WHOLE_DAY + minute;
       return minute;
