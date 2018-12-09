@@ -18,8 +18,8 @@
       var adjustedStart = _this.getInRangeStart(start);
       var adjustedEnd = _this.getInRangeEnd(end);
 
-      _this.start = Math.floor(_this.getLocaleTime(adjustedStart) / 60000);
-      _this.end = Math.floor(_this.getLocaleTime(adjustedEnd) / 60000);
+      _this.start = _this.getLocaleTime(adjustedStart);
+      _this.end = _this.getLocaleTime(adjustedEnd);
       _this.startMID = _this.minuteInDay(adjustedStart);
       _this.endMID = _this.minuteInDay(adjustedEnd);
       _this.beginningDay = adjustedStart.getDay();
@@ -50,16 +50,25 @@
       if (_this.end - _this.start > 0) {
         if (_this.withinSingleDay()) {
           _this.minutes += _this.inDayCount(
-                                            _this.startMID,
-                                            _this.endMID,
-                                            _this.beginningDay
+                                            _this.start,
+                                            _this.end,
+                                            _this.beginningDay,
+                                            _this.start - _this.startMID
                             );
         } else {
           _this.minutes += _this.inDayCount(
-                                  _this.startMID, WHOLE_DAY, _this.beginningDay)
+                                            _this.start,
+                                            _this.start + WHOLE_DAY,
+                                            _this.beginningDay,
+                                            _this.start - _this.startMID
+                            );
           _this.minutes += _this.inDayCount(
-                                  0, _this.endMID, _this.endingDay)
-          _this.countTheRemainingDays();
+                                            _this.end - _this.endMID,
+                                            _this.end,
+                                            _this.endingDay,
+                                            _this.end - _this.endMID
+                            );
+          _this.countTheRemainingDays_v2();
         }
       }
 
@@ -71,7 +80,54 @@
 
     _this.getExcludedRanges = function() {
       var exc = _this.getConfig("except", []);
-      console.log(exc);
+      var rs = [];
+      var ilen = exc.length;
+      for (var i = 0; i < ilen; i++) {
+        var ranges = _this.splitRangeToInDayRanges(exc[i][0], exc[i][1]);
+        var jlen = ranges.length;
+        for (var j = 0; j < jlen; j++) {
+          rs[rs.length] = ranges[j];
+        }
+      }
+      return rs;
+    }
+
+    _this.splitRangeToInDayRanges = function(lowerBound, upperBound) {
+      var lb = _this.getLocaleTime(lowerBound);
+      var ub = _this.getLocaleTime(upperBound);
+
+      if (lb >= ub || ! _this.related(lb, ub))
+        return [];
+      var day = lowerBound.getDay();
+      var lbMID = _this.minuteInDay(lowerBound);
+      if (day === 0) {
+        lb += WHOLE_DAY - lbMID;
+        day++;
+      }
+      if (day === 6) {
+        lb += WHOLE_DAY - lbMID + WHOLE_DAY;
+        day = 1;
+      }
+      var rs = [];
+      while (lb < ub) {
+        if (day !== 0 && day !== 6) {
+          rs[rs.length] = lb + WHOLE_DAY < ub
+                          ? [lb, lb + WHOLE_DAY]
+                          : [lb, ub];
+        }
+        lb += WHOLE_DAY;
+        day++;
+        if (day > 6)
+          day = 0;
+      }
+      return rs;
+    }
+
+    _this.related = function(lb, ub) {
+      return (lb < _this.start && _this.start < ub)
+          || (lb < _this.end && _this.end < ub)
+          || (_this.start < lb && lb < _this.end)
+          || (_this.start < ub && ub < _this.end)
     }
 
     _this.getConfig = function(key, fallback) {
@@ -94,7 +150,7 @@
     }
 
     _this.getLocaleTime = function(input) {
-      return input.getTime() - input.getTimezoneOffset();
+      return Math.floor( (input.getTime() - input.getTimezoneOffset()) / 60000 );
     }
 
     _this.withinSingleDay = function() {
@@ -102,9 +158,82 @@
           && _this.startMID <= _this.endMID;
     };
 
-    _this.inDayCount = function(startMID, endMID, dayOfWeek) {
+    _this.inDayCount = function(start, end, dayOfWeek, beginningOfDate) {
       if (dayOfWeek == 0 || dayOfWeek == 6)
         return 0;
+      var countable = _this.getCountablePairs(start, end);
+      var countableInMinutes = _this.toMinutes(countable, beginningOfDate);
+      var len = countableInMinutes.length;
+      var rs = 0;
+      for (var i = 0; i < len; i++) {
+        rs += _this.rangeCount(countableInMinutes[i][0], countableInMinutes[i][1]);
+      }
+      return rs;
+    };
+
+    _this.getCountablePairs = function(start, end) {
+      var queue = [];
+      queue[0] = [start, end];
+      var ilen = _this.excluded.length;
+      for (var i = 0; i < ilen; i++) {
+        //console.log("excluded: ", i, _this.excluded[i], "queue: ", queue);
+        var subQueue = [];
+        var jlen = queue.length;
+        for (var j = 0; j < jlen; j++) {
+          //console.log("queue: ", j, queue[j], "subQueue: ", subQueue);
+          var splitted = _this.getCountableRanges(queue[j], _this.excluded[i]);
+          var klen = splitted.length;
+          //console.log("splitted: ", splitted);
+          for (var k = 0; k < klen; k++) {
+            subQueue[subQueue.length] = splitted[k];
+          }
+        }
+        queue = subQueue;
+      }
+      return queue;
+    };
+
+    _this.getCountableRanges = function(basePair, excludePair) {
+      var a = basePair[0];
+      var b = basePair[1];
+      var x = excludePair[0];
+      var y = excludePair[1];
+      if (x <= a) {
+        if (y <= a) {
+          return [basePair];
+        } else {
+          if (y >= b) {
+            return [];
+          } else {
+            return [[y, b]];
+          }
+        }
+      } else {
+        if (x >= b) {
+          return [basePair];
+        } else {
+          if (y >= b) {
+            return [[a, x]];
+          } else {
+            return [[a, x], [y, b]];
+          }
+        }
+      }
+    };
+
+    _this.toMinutes = function(countable, beginningOfDate) {
+      var rs = [];
+      var len = countable.length;
+      for (var i = 0; i < len; i++) {
+        rs[rs.length] = [
+                          countable[i][0] - beginningOfDate,
+                          countable[i][1] - beginningOfDate
+                        ];
+      }
+      return rs;
+    };
+
+    _this.rangeCount = function(startMID, endMID) {
       var startPhase = _this.phaseOfDay(startMID);
       var endPhase = _this.phaseOfDay(endMID);
 
@@ -171,6 +300,7 @@
     };
 
     _this.countTheRemainingDays = function() {
+      /*
       var weekDayIndicate = _this.beginningDay;
       var remainingMinutes = _this.end - _this.start;
       remainingMinutes -= _this.endMID;
@@ -184,7 +314,30 @@
           _this.minutes += ONE_DATE_MINUTES;
         }
       }
+      */
+      console.error("calling legacy code");
     };
+
+    _this.countTheRemainingDays_v2 = function() {
+      var weekDayIndicate = _this.beginningDay;
+      var pot = _this.start + WHOLE_DAY - _this.startMID;
+      var endPoint = _this.end - _this.endMID;
+
+      while (pot < endPoint) {
+        weekDayIndicate++;
+        if (weekDayIndicate > 6) {
+          weekDayIndicate = 0;
+        }
+        _this.minutes += _this.inDayCount(
+                                            pot,
+                                            pot + WHOLE_DAY,
+                                            weekDayIndicate,
+                                            pot
+                          );
+        pot += WHOLE_DAY;
+      }
+      
+    }
 
     _this.format = function() {
       var days = Math.floor(_this.minutes / ONE_DATE_MINUTES);

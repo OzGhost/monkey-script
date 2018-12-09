@@ -1,7 +1,7 @@
 window.onload = function() {
   var total = 0
   var pass = 0
-  var mode = "exclude"; // [all, normal, edge, weekend, exclude]
+  var mode = "all"; // [all, normal, edge, weekend, exclude]
 
   function testRun(start, end, expect) {
     total++
@@ -128,9 +128,24 @@ window.onload = function() {
     });
 
     testRun('2018-12-08T00:00:00', '2018-12-13T19:42:00', '2d0h0m');
+    testRun('2018-12-11T00:00:00', '2018-12-11T19:42:00', '0d0h0m');
+    testRun('2018-12-12T14:00:00', '2018-12-13T16:22:00', '0d5h52m');
+
+    window.kit.cfg.set("wdc", {
+      except: [
+        [
+          new Date("2018-12-13T09:35:00"),
+          new Date("2018-12-13T10:00:00")
+        ]
+      ]
+    });
+
+    testRun('2018-12-13T09:00:00', '2018-12-13T11:13:00', '0d1h48m');
+    testRun('2018-12-13T09:00:00', '2018-12-13T09:50:00', '0d0h35m');
+    testRun('2018-12-13T09:45:00', '2018-12-13T14:50:00', '0d3h20m');
   }
 
-  console.log(' >> ' + pass + ' / ' + total + ' <<')
+  console.warn(' >> ' + (total - pass) + ' / ' + total + ' <<')
 
   /**
 
