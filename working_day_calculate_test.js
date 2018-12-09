@@ -2,10 +2,11 @@ window.onload = function() {
   var total = 0
   var pass = 0
   var mode = "all"; // [all, normal, edge, weekend, exclude]
+  var wdc = window.kit.wdc;
 
   function testRun(start, end, expect) {
     total++
-    var out = window.kit.wdc.count(new Date(start), new Date(end)).format();
+    var out = wdc.count(new Date(start), new Date(end)).format();
     if (expect === out) {
       pass++
     } else {
