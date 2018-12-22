@@ -1,3 +1,4 @@
+'use strict';
 (function(){
   function Configuration() {
     var _this = this;

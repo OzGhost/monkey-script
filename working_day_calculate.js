@@ -1,3 +1,4 @@
+'use strict';
 (function(){
   function WorkingDateCounter () {
     var _this = this;
@@ -348,7 +349,7 @@
     };
 
     _this.getMinutes = function() {
-      return _this.minute;
+      return _this.minutes;
     };
 
     return {
